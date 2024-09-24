@@ -1,0 +1,168 @@
+{
+  "name": "ai-coder",
+  "displayName": "AI Coder",
+  "description": "Code using OpenAI and Anthropic",
+  "version": "0.0.1",
+  "publisher": "RizwanAnsari",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rizansari/VSCodeAICoder.git"
+  },
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "AI"
+  ],
+  "activationEvents": [
+    "onLanguage:json"
+  ],
+  "main": "./out/extension.js",
+  "files": [
+    "out/**/*",
+    "media/**/*"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "AI Coder",
+      "properties": {
+        "ai-coder.provider": {
+          "type": "string",
+          "default": "anthropic",
+          "enum": [
+            "anthropic",
+            "openai"
+          ],
+          "enumDescriptions": [
+            "Use Anthropic API",
+            "Use OpenAI API"
+          ],
+          "description": "Choose between Anthropic and OpenAI as the AI provider"
+        },
+        "ai-coder.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Anthropic API Key"
+        },
+        "ai-coder.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key"
+        },
+        "ai-coder.anthropicModel": {
+          "type": "string",
+          "default": "claude-3-haiku-20240307",
+          "enum": [
+            "claude-3-haiku-20240307",
+            "claude-3-5-sonnet-20240620",
+            "claude-3-opus-20240229"
+          ],
+          "enumDescriptions": [
+            "3 Haiku - Fast",
+            "Sonnet 3.5 - Best",
+            "3 Opus - Expensive"
+          ],
+          "description": "Anthropic Model to use"
+        },
+        "ai-coder.openaiModel": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "enum": [
+            "gpt-4o-mini",
+            "gpt-4o",
+            "gpt-4o-2024-08-06"
+          ],
+          "enumDescriptions": [
+            "GPT-4o Mini",
+            "GPT-4o",
+            "GPT-4o 2024-08-06"
+          ],
+          "description": "OpenAI Model to use"
+        },
+        "ai-coder.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "enum": [
+            1024,
+            2048,
+            4096,
+            8192,
+            16384
+          ],
+          "enumDescriptions": [
+            "1024 tokens",
+            "2048 tokens",
+            "4096 tokens",
+            "8192 tokens",
+            "16384 tokens"
+          ],
+          "description": "Maximum number of tokens to generate"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ai-coder.generateCode",
+        "title": "AI Coder: Generate Code with AI API"
+      },
+      {
+        "command": "ai-coder.changeModel",
+        "title": "AI Coder: Change AI Provider"
+      },
+      {
+        "command": "ai-coder.selectAnthropicModel",
+        "title": "AI Coder: Change Anthropic Model"
+      },
+      {
+        "command": "ai-coder.selectOpenAIModel",
+        "title": "AI Coder: Change OpenAI Model"
+      },
+      {
+        "command": "ai-coder.changeMaxTokens",
+        "title": "AI Coder: Change Max Tokens"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai-code-generator",
+          "title": "AI Coder",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ai-code-generator": [
+        {
+          "type": "webview",
+          "id": "aiCodeGenerator",
+          "name": "Main Window"
+        }
+      ]
+    },
+    "Keybindings": []
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.92.0",
+    "@types/node": "^14.x.x",
+    "@typescript-eslint/eslint-plugin": "^5.30.0",
+    "@typescript-eslint/parser": "^5.30.0",
+    "eslint": "^8.13.0",
+    "typescript": "^4.7.2"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
+    "openai": "^4.63.0",
+    "marked": "^14.1.2"
+  }
+}
