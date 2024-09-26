@@ -15,6 +15,8 @@ textarea {
     width: 100%;
     margin-bottom: 10px;
     padding: 5px;
+    height: 100px; /* Increased height */
+    resize: vertical;
 }
 
 button {
@@ -51,4 +53,33 @@ button:hover {
     border-radius: 5px;
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-editor-font-size);
+}
+
+#configInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+
+.selected-file {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.remove-file {
+    width: auto;
+    margin-right: 5px;
+    padding: 0 5px;
+    background-color: transparent;
+    color: var(--vscode-errorForeground);
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+.remove-file:hover {
+    background-color: var(--vscode-errorForeground);
+    color: var(--vscode-button-foreground);
 }

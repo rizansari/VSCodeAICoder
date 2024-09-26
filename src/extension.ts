@@ -77,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
                 });
 
                 // add prompt to the top of the response with new line markdown
-                fullResponse = `${prompt}\n\n${fullResponse}`;
+                fullResponse = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
 
                 // open new untitled document with the generated code
                 const doc = await vscode.workspace.openTextDocument({

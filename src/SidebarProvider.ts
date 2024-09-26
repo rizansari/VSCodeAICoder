@@ -20,6 +20,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
+        // Listen for configuration changes
+        vscode.workspace.onDidChangeConfiguration(() => {
+            this.updateConfigInfo(webviewView);
+        });
+
+        // Initial update of configuration info
+        this.updateConfigInfo(webviewView);
+
         webviewView.webview.onDidReceiveMessage(async (data) => {
             console.log('Received message from the webview:', data);
             switch (data.type) {
@@ -45,6 +53,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 }
             }
+        });
+    }
+
+    private updateConfigInfo(webviewView: vscode.WebviewView) {
+        const provider = vscode.workspace.getConfiguration().get('ai-coder.provider');
+        let model = "";
+        if (provider === 'openai') {
+            model = vscode.workspace.getConfiguration().get('ai-coder.openaiModel')!;
+        } else if (provider === 'anthropic') {
+            model = vscode.workspace.getConfiguration().get('ai-coder.anthropicModel')!;
+        }
+        const maxTokens = vscode.workspace.getConfiguration().get('ai-coder.maxTokens');
+
+        webviewView.webview.postMessage({
+            type: 'updateConfig',
+            provider,
+            model,
+            maxTokens
         });
     }
 
@@ -80,6 +106,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <script nonce="${nonce}" src="${markedUri}"></script>
 			</head>
 			<body>
+                <div id="configInfo">
+					<span id="provider">Provider: </span>
+					<span id="model">Model: </span>
+					<span id="maxTokens">Max Tokens: </span>
+				</div>
 				<textarea type="text" id="codePrompt" placeholder="Enter a description of the code you want to generate"></textarea>
 				<button id="selectFilesBtn">Select Files</button>
 				<div id="selectedFiles"></div>

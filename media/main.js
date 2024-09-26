@@ -10,6 +10,10 @@
         const selectedFilesDiv = document.getElementById('selectedFiles');
         const responsesContainer = document.getElementById('responsesContainer');
 
+        const providerSpan = document.getElementById('provider');
+        const modelSpan = document.getElementById('model');
+        const maxTokensSpan = document.getElementById('maxTokens');
+
         generateBtn.addEventListener('click', () => {
             const prompt = codePrompt.value;
             if (prompt) {
@@ -28,6 +32,29 @@
         selectFilesBtn.addEventListener('click', () => {
             vscode.postMessage({ type: 'selectFiles' });
         });
+
+        function updateSelectedFilesUI() {
+            selectedFilesDiv.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'selected-file';
+                fileElement.innerHTML = `
+                    <button class="remove-file" data-index="${index}">×</button>
+                    <span>${file}</span>
+                `;
+                selectedFilesDiv.appendChild(fileElement);
+            });
+
+            // Add event listeners for remove buttons
+            document.querySelectorAll('.remove-file').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    selectedFiles.splice(index, 1);
+                    updateSelectedFilesUI();
+                });
+            });
+        }
+
 
         // Function to parse and format the raw text
         function parseAndFormatContent(rawText) {
@@ -86,9 +113,17 @@
                         rawCodeElement.innerHTML = parseAndFormatContent(message.value);
                     }
                     break;
+
                 case 'filesSelected':
-                    selectedFiles = message.files;
-                    selectedFilesDiv.innerHTML = 'Selected files: ' + selectedFiles.join(', ');
+                    // Merge new files with existing ones, removing duplicates
+                    selectedFiles = [...new Set([...selectedFiles, ...message.files])];
+                    updateSelectedFilesUI();
+                    break;
+
+                case 'updateConfig':
+                    providerSpan.textContent = `Provider: ${message.provider}`;
+                    modelSpan.textContent = `Model: ${message.model}`;
+                    maxTokensSpan.textContent = `Max Tokens: ${message.maxTokens}`;
                     break;
             }
         });
