@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -15,6 +15,19 @@
   },
   "categories": [
     "AI"
+  ],
+  "keywords": [
+    "code-generation",
+    "openai",
+    "anthropic",
+    "claude",
+    "programming-languages",
+    "code-completion",
+    "ai-powered-coding",
+    "productivity-tool",
+    "developer-tool",
+    "code-snippet-generator",
+    "ai-assistant"
   ],
   "activationEvents": [
     "onLanguage:json"
