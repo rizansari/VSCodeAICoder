@@ -4,6 +4,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { SidebarProvider } from './SidebarProvider';
 
+type ConversationMessage = 
+    | { role: 'system' | 'user' | 'assistant'; content: string }
+    | { role: 'function'; content: string; name: string };
+
+let conversationHistory: ConversationMessage[] = [];
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Congratulations, your extension "ai-coder" is now active!');
 
@@ -14,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('ai-coder.generateCode', async (prompt: string, files: string[], webviewView: vscode.WebviewView) => {
+        vscode.commands.registerCommand('ai-coder.generateCode', async (prompt: string, files: string[], webviewView: vscode.WebviewView, includeHistory: boolean) => {
             console.log('Generating code for: ' + prompt);
             const config = vscode.workspace.getConfiguration('ai-coder');
             const provider = config.get('provider') as string;
@@ -43,26 +49,31 @@ export function activate(context: vscode.ExtensionContext) {
                     prompt: prompt
                 });
 
+                let messages: ConversationMessage[];
+                if (includeHistory) {
+                    messages = [...conversationHistory, { role: 'user', content: prompt }];
+                } else {
+                    messages = [{ role: 'user', content: prompt }];
+                }
+
                 let fullPrompt;
 
-                if (files.length === 0) {
-                    fullPrompt = `${prompt}`;
-                } else {
+                if (files.length > 0) {
                     // Read file contents
                     const fileContents = await Promise.all(files.map(async (file) => {
                         const content = await fs.promises.readFile(file, 'utf8');
                         return `File: ${file}\n\n${content}\n\n`;
                     }));
 
-                    fullPrompt = `${prompt}\n\nHere are the contents of the files:\n\n${fileContents.join('\n')}`;
+                    messages[messages.length - 1].content += `\n\nHere are the contents of the files:\n\n${fileContents.join('\n')}`;
                 }
 
                 if (provider === 'anthropic') {
-                    await generateWithAnthropic(apiKey, model, maxTokens, fullPrompt, responseId, webviewView, (text) => {
+                    await generateWithAnthropic(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
                         fullResponse += text;
                     });
                 } else if (provider === 'openai') {
-                    await generateWithOpenAI(apiKey, model, maxTokens, fullPrompt, responseId, webviewView, (text) => {
+                    await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
                         fullResponse += text;
                     });
                 } else {
@@ -75,6 +86,10 @@ export function activate(context: vscode.ExtensionContext) {
                     id: responseId,
                     value: fullResponse
                 });
+
+                // Update conversation history
+                conversationHistory.push({ role: 'user', content: prompt });
+                conversationHistory.push({ role: 'assistant', content: fullResponse });
 
                 // add prompt to the top of the response with new line markdown
                 fullResponse = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
@@ -231,7 +246,7 @@ async function generateWithAnthropic(
     apiKey: string,
     model: string,
     maxTokens: number,
-    prompt: string,
+    messages: ConversationMessage[],
     responseId: string,
     webviewView: vscode.WebviewView,
     onChunk: (text: string) => void
@@ -240,8 +255,18 @@ async function generateWithAnthropic(
         apiKey: apiKey
     });
 
+    // Convert ConversationMessage[] to Anthropic's expected format
+    const anthropicMessages = messages.map(msg => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+            return { role: msg.role, content: msg.content };
+        } else {
+            // For 'system' and 'function' roles, convert to 'user'
+            return { role: 'user' as const, content: `[${msg.role.toUpperCase()}]: ${msg.content}` };
+        }
+    });
+
     const stream = await client.messages.stream({
-        messages: [{ role: 'user', content: prompt }],
+        messages: anthropicMessages,
         model: model,
         max_tokens: maxTokens,
     }).on('text', (text) => {
@@ -260,16 +285,31 @@ async function generateWithOpenAI(
     apiKey: string,
     model: string,
     maxTokens: number,
-    prompt: string,
+    messages: ConversationMessage[],
     responseId: string,
     webviewView: vscode.WebviewView,
     onChunk: (text: string) => void
 ) {
     const openai = new OpenAI({ apiKey });
 
+    const openaiMessages = messages.map(msg => {
+        if (msg.role === 'function') {
+            return {
+                role: msg.role,
+                content: msg.content,
+                name: msg.name
+            };
+        } else {
+            return {
+                role: msg.role,
+                content: msg.content
+            };
+        }
+    });
+
     const stream = await openai.chat.completions.create({
         model: model,
-        messages: [{ role: 'user', content: prompt }],
+        messages: openaiMessages,
         max_tokens: maxTokens,
         stream: true,
     });

@@ -1,8 +1,10 @@
 (function () {
     const vscode = acquireVsCodeApi();
-    let selectedFiles = [];
+    
 
     document.addEventListener('DOMContentLoaded', (event) => {
+        let selectedFiles = [];
+        
         const codePrompt = document.getElementById('codePrompt');
         const generateBtn = document.getElementById('generateBtn');
         const clearBtn = document.getElementById('clearBtn');
@@ -14,10 +16,18 @@
         const modelSpan = document.getElementById('model');
         const maxTokensSpan = document.getElementById('maxTokens');
 
+        const includeHistoryCheckbox = document.getElementById('includeHistory');
+
         generateBtn.addEventListener('click', () => {
             const prompt = codePrompt.value;
+            const includeHistory = includeHistoryCheckbox.checked;
             if (prompt) {
-                vscode.postMessage({ type: 'generateCode', value: prompt, files: selectedFiles });
+                vscode.postMessage({ 
+                    type: 'generateCode', 
+                    value: prompt, 
+                    files: selectedFiles,
+                    includeHistory: includeHistory
+                });
                 responsesContainer.style.display = 'block';
             }
         });

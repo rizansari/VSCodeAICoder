@@ -83,3 +83,19 @@ button:hover {
     background-color: var(--vscode-errorForeground);
     color: var(--vscode-button-foreground);
 }
+
+.historyToggle {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.historyToggle input[type="checkbox"] {
+    width: auto;
+    margin-right: 5px;
+    margin-bottom: 0;
+}
+
+.historyToggle label {
+    margin-bottom: 0;
+}
