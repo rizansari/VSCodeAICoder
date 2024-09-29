@@ -3,8 +3,9 @@ import * as fs from 'fs';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { SidebarProvider } from './SidebarProvider';
+import path = require('path');
 
-type ConversationMessage = 
+type ConversationMessage =
     | { role: 'system' | 'user' | 'assistant'; content: string }
     | { role: 'function'; content: string; name: string };
 
@@ -17,6 +18,37 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider("aiCodeGenerator", sidebarProvider)
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ai-coder.acceptChanges', async (originalFilePath: string) => {
+            const activeEditor = vscode.window.activeTextEditor;
+            if (!activeEditor || !activeEditor.document.uri.scheme.startsWith('generated-')) {
+                vscode.window.showErrorMessage('Please focus on a diff view to accept changes.');
+                return;
+            }
+
+            if (!fs.existsSync(originalFilePath)) {
+                vscode.window.showErrorMessage(`Original file not found: ${originalFilePath}`);
+                return;
+            }
+
+            const generatedContent = activeEditor.document.getText();
+
+            try {
+                await fs.promises.writeFile(originalFilePath, generatedContent, 'utf8');
+                vscode.window.showInformationMessage(`Changes accepted and saved to ${path.basename(originalFilePath)}`);
+
+                // Close the diff view
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+                // Open the updated file
+                const document = await vscode.workspace.openTextDocument(originalFilePath);
+                await vscode.window.showTextDocument(document);
+            } catch (error) {
+                vscode.window.showErrorMessage(`Error saving changes: ${error}`);
+            }
+        })
     );
 
     context.subscriptions.push(
@@ -92,19 +124,103 @@ export function activate(context: vscode.ExtensionContext) {
                 conversationHistory.push({ role: 'assistant', content: fullResponse });
 
                 // add prompt to the top of the response with new line markdown
-                fullResponse = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
+                let fullResponseEx = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
 
                 // open new untitled document with the generated code
                 const doc = await vscode.workspace.openTextDocument({
-                    content: fullResponse, language: 'markdown'
+                    content: fullResponseEx, language: 'markdown'
                 });
                 await vscode.window.showTextDocument(doc);
+
+                const codeBlocks = extractCodeBlocks(fullResponse, files);
+
+                // Create a new Map to store our content providers
+                const contentProviders = new Map<string, vscode.TextDocumentContentProvider>();
+
+                for (const file of files) {
+                    const originalUri = vscode.Uri.file(file);
+                    const fileName = path.basename(file);
+                    const scheme = `generated-${encodeURIComponent(fileName)}`;
+                    const generatedUri = vscode.Uri.parse(`${scheme}:${fileName}`);
+
+                    // Create a TextDocumentContentProvider for the generated content
+                    const provider = new class implements vscode.TextDocumentContentProvider {
+                        provideTextDocumentContent(uri: vscode.Uri): string {
+                            return codeBlocks[file] || '';
+                        }
+                    };
+
+                    // Store the provider in our Map
+                    contentProviders.set(scheme, provider);
+
+                    // Register the provider with its unique scheme
+                    context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(scheme, provider));
+
+                    // Show diff
+                    await vscode.commands.executeCommand('vscode.diff', originalUri, generatedUri, `${fileName} (Original ↔ Generated)`);
+
+                    // Add a status bar item to accept changes
+                    const acceptChangesItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+                    acceptChangesItem.text = "$(check) Accept AI Coder Changes";
+                    acceptChangesItem.command = {
+                        command: 'ai-coder.acceptChanges',
+                        title: 'Accept AI Coder Changes',
+                        arguments: [file]
+                    }
+                    acceptChangesItem.show();
+
+                    // Dispose of the status bar item when the diff view is closed
+                    const disposable = vscode.window.onDidChangeActiveTextEditor((editor) => {
+                        if (!editor || editor.document.uri.toString() !== generatedUri.toString()) {
+                            acceptChangesItem.dispose();
+                            disposable.dispose();
+                        }
+                    });
+
+                    context.subscriptions.push(acceptChangesItem, disposable);
+                }
+
+                // Dispose of the content providers when they're no longer needed
+                // context.subscriptions.push(new vscode.Disposable(() => {
+                //     for (const [scheme, provider] of contentProviders) {
+                //         vscode.workspace.unregisterTextDocumentContentProvider(scheme);
+                //     }
+                // }));
 
             } catch (error: any) {
                 vscode.window.showErrorMessage('Error generating code: ' + error.message);
             }
         })
     );
+
+    function extractCodeBlocks(fullResponse: string, files: string[]): { [filePath: string]: string } {
+        const codeBlocks: { [filePath: string]: string } = {};
+
+        // If there's only one file, assume the entire code block belongs to it
+        if (files.length === 1) {
+            const match = fullResponse.match(/```[\s\S]*?```/);
+            if (match) {
+                codeBlocks[files[0]] = match[0].replace(/```[\s\S]*?\n/, '').replace(/```$/, '').trim();
+            }
+            return codeBlocks;
+        }
+
+        // If there are multiple files, split the response by file markers
+        const fileBlocks = fullResponse.split(/File: .+/);
+        fileBlocks.shift(); // Remove the part before the first file marker
+
+        files.forEach((file, index) => {
+            if (index < fileBlocks.length) {
+                const block = fileBlocks[index];
+                const match = block.match(/```[\s\S]*?```/);
+                if (match) {
+                    codeBlocks[file] = match[0].replace(/```[\s\S]*?\n/, '').replace(/```$/, '').trim();
+                }
+            }
+        });
+
+        return codeBlocks;
+    }
 
     context.subscriptions.push(
         vscode.commands.registerCommand('ai-coder.changeModel', async () => {
