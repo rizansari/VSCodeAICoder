@@ -11,45 +11,105 @@ type ConversationMessage =
 
 let conversationHistory: ConversationMessage[] = [];
 
+interface DiffInfo {
+    originalUri: vscode.Uri;
+    generatedUri: vscode.Uri;
+    fileName: string;
+    content: string;
+}
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Congratulations, your extension "ai-coder" is now active!');
 
     const sidebarProvider = new SidebarProvider(context.extensionUri);
+
+    let currentDiffIndex = 0;
+    let diffs: DiffInfo[] = [];
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider("aiCodeGenerator", sidebarProvider)
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('ai-coder.acceptChanges', async (originalFilePath: string) => {
-            const activeEditor = vscode.window.activeTextEditor;
-            if (!activeEditor || !activeEditor.document.uri.scheme.startsWith('generated-')) {
-                vscode.window.showErrorMessage('Please focus on a diff view to accept changes.');
-                return;
-            }
-
-            if (!fs.existsSync(originalFilePath)) {
-                vscode.window.showErrorMessage(`Original file not found: ${originalFilePath}`);
-                return;
-            }
-
-            const generatedContent = activeEditor.document.getText();
-
-            try {
-                await fs.promises.writeFile(originalFilePath, generatedContent, 'utf8');
-                vscode.window.showInformationMessage(`Changes accepted and saved to ${path.basename(originalFilePath)}`);
-
-                // Close the diff view
-                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-
-                // Open the updated file
-                const document = await vscode.workspace.openTextDocument(originalFilePath);
-                await vscode.window.showTextDocument(document);
-            } catch (error) {
-                vscode.window.showErrorMessage(`Error saving changes: ${error}`);
+        vscode.commands.registerCommand('ai-coder.acceptChanges', async () => {
+            if (currentDiffIndex >= 0 && currentDiffIndex < diffs.length) {
+                const diff = diffs[currentDiffIndex];
+                try {
+                    await fs.promises.writeFile(diff.originalUri.fsPath, diff.content, 'utf8');
+                    vscode.window.showInformationMessage(`Changes accepted and saved to ${diff.fileName}`);
+                    await moveToNextDiff();
+                } catch (error) {
+                    vscode.window.showErrorMessage(`Error saving changes: ${error}`);
+                }
             }
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ai-coder.rejectChanges', async () => {
+            await moveToNextDiff();
+        })
+    );
+
+    async function showCurrentDiff() {
+        if (currentDiffIndex >= 0 && currentDiffIndex < diffs.length) {
+            const diff = diffs[currentDiffIndex];
+            await vscode.commands.executeCommand('vscode.diff', 
+                diff.originalUri, 
+                diff.generatedUri, 
+                `${diff.fileName} (${currentDiffIndex + 1}/${diffs.length}) (Original ↔ Generated)`
+            );
+            updateStatusBarItems();
+        } else {
+            await closeAllDiffViews();
+            vscode.window.showInformationMessage('All diffs have been reviewed.');
+            diffs = [];
+            currentDiffIndex = 0;
+        }
+    }
+
+    async function moveToNextDiff() {
+        currentDiffIndex++;
+        await showCurrentDiff();
+    }
+
+    async function closeAllDiffViews() {
+        const diffEditors = vscode.window.visibleTextEditors.filter(
+            editor => editor.document.uri.scheme.startsWith('generated-')
+        );
+
+        for (const editor of diffEditors) {
+            await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn, preserveFocus: false });
+            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        }
+    }
+
+    let acceptChangesItem: vscode.StatusBarItem;
+    let rejectChangesItem: vscode.StatusBarItem;
+
+    function updateStatusBarItems() {
+        if (!acceptChangesItem) {
+            acceptChangesItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+            acceptChangesItem.text = "$(check) Accept Changes";
+            acceptChangesItem.command = 'ai-coder.acceptChanges';
+            context.subscriptions.push(acceptChangesItem);
+        }
+
+        if (!rejectChangesItem) {
+            rejectChangesItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
+            rejectChangesItem.text = "$(x) Reject Changes";
+            rejectChangesItem.command = 'ai-coder.rejectChanges';
+            context.subscriptions.push(rejectChangesItem);
+        }
+
+        if (currentDiffIndex < diffs.length) {
+            acceptChangesItem.show();
+            rejectChangesItem.show();
+        } else {
+            acceptChangesItem.hide();
+            rejectChangesItem.hide();
+        }
+    }
 
     context.subscriptions.push(
         vscode.commands.registerCommand('ai-coder.generateCode', async (prompt: string, files: string[], webviewView: vscode.WebviewView, includeHistory: boolean) => {
@@ -134,8 +194,7 @@ export function activate(context: vscode.ExtensionContext) {
 
                 const codeBlocks = extractCodeBlocks(fullResponse, files);
 
-                // Create a new Map to store our content providers
-                const contentProviders = new Map<string, vscode.TextDocumentContentProvider>();
+                diffs = [];
 
                 for (const file of files) {
                     const originalUri = vscode.Uri.file(file);
@@ -143,49 +202,25 @@ export function activate(context: vscode.ExtensionContext) {
                     const scheme = `generated-${encodeURIComponent(fileName)}`;
                     const generatedUri = vscode.Uri.parse(`${scheme}:${fileName}`);
 
-                    // Create a TextDocumentContentProvider for the generated content
-                    const provider = new class implements vscode.TextDocumentContentProvider {
-                        provideTextDocumentContent(uri: vscode.Uri): string {
-                            return codeBlocks[file] || '';
-                        }
-                    };
-
-                    // Store the provider in our Map
-                    contentProviders.set(scheme, provider);
-
-                    // Register the provider with its unique scheme
-                    context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(scheme, provider));
-
-                    // Show diff
-                    await vscode.commands.executeCommand('vscode.diff', originalUri, generatedUri, `${fileName} (Original ↔ Generated)`);
-
-                    // Add a status bar item to accept changes
-                    const acceptChangesItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-                    acceptChangesItem.text = "$(check) Accept AI Coder Changes";
-                    acceptChangesItem.command = {
-                        command: 'ai-coder.acceptChanges',
-                        title: 'Accept AI Coder Changes',
-                        arguments: [file]
-                    }
-                    acceptChangesItem.show();
-
-                    // Dispose of the status bar item when the diff view is closed
-                    const disposable = vscode.window.onDidChangeActiveTextEditor((editor) => {
-                        if (!editor || editor.document.uri.toString() !== generatedUri.toString()) {
-                            acceptChangesItem.dispose();
-                            disposable.dispose();
-                        }
+                    diffs.push({
+                        originalUri,
+                        generatedUri,
+                        fileName,
+                        content: codeBlocks[file] || ''
                     });
 
-                    context.subscriptions.push(acceptChangesItem, disposable);
+                    // Register a TextDocumentContentProvider for the generated content
+                    context.subscriptions.push(
+                        vscode.workspace.registerTextDocumentContentProvider(scheme, {
+                            provideTextDocumentContent: () => codeBlocks[file] || ''
+                        })
+                    );
                 }
 
-                // Dispose of the content providers when they're no longer needed
-                // context.subscriptions.push(new vscode.Disposable(() => {
-                //     for (const [scheme, provider] of contentProviders) {
-                //         vscode.workspace.unregisterTextDocumentContentProvider(scheme);
-                //     }
-                // }));
+                if (diffs.length > 0) {
+                    currentDiffIndex = 0;
+                    showCurrentDiff();
+                }
 
             } catch (error: any) {
                 vscode.window.showErrorMessage('Error generating code: ' + error.message);

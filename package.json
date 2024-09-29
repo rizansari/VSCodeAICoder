@@ -135,6 +135,14 @@
       {
         "command": "ai-coder.changeMaxTokens",
         "title": "AI Coder: Change Max Tokens"
+      },
+      {
+        "command": "ai-coder.acceptChanges",
+        "title": "AI Coder: Accept Changes"
+      },
+      {
+        "command": "ai-coder.rejectChanges",
+        "title": "AI Coder: Reject Changes"
       }
     ],
     "viewsContainers": {

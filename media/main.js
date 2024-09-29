@@ -89,6 +89,12 @@
             return marked.parse(formattedText, { renderer: renderer });
         }
 
+        // simple markdown parser
+        function parseMarkdown(text) {
+            const renderer = new marked.Renderer();
+            return marked.parse(text, { renderer: renderer });
+        }
+
         // Handle the message inside the webview
         window.addEventListener('message', event => {
             const message = event.data;
@@ -110,7 +116,7 @@
                     if (markdownElement) {
                         const currentContent = markdownElement.textContent || '';
                         const newContent = currentContent + message.value;
-                        markdownElement.innerHTML = parseAndFormatContent(newContent);
+                        markdownElement.innerHTML = parseMarkdown(newContent);
                     }
                     break;
                 case 'finalizeGeneratedCode':
@@ -120,7 +126,7 @@
                     }
                     const rawCodeElement = document.querySelector(`#response-${message.id} .raw-code`);
                     if (rawCodeElement) {
-                        rawCodeElement.innerHTML = parseAndFormatContent(message.value);
+                        rawCodeElement.innerHTML = parseMarkdown(message.value);
                     }
                     break;
 
