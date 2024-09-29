@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -85,12 +85,16 @@
           "enum": [
             "gpt-4o-mini",
             "gpt-4o",
-            "gpt-4o-2024-08-06"
+            "o1-preview",
+            "o1-mini",
+            "gpt-4-turbo"
           ],
           "enumDescriptions": [
             "GPT-4o Mini",
             "GPT-4o",
-            "GPT-4o 2024-08-06"
+            "O1 Preview",
+            "O1 Mini",
+            "GPT-4 Turbo"
           ],
           "description": "OpenAI Model to use"
         },
@@ -102,14 +106,18 @@
             2048,
             4096,
             8192,
-            16384
+            16384,
+            32768,
+            65536
           ],
           "enumDescriptions": [
             "1024 tokens",
             "2048 tokens",
             "4096 tokens",
             "8192 tokens",
-            "16384 tokens"
+            "16384 tokens",
+            "32768 tokens",
+            "65536 tokens"
           ],
           "description": "Maximum number of tokens to generate"
         }
