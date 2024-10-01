@@ -31,6 +31,37 @@ button:hover {
     background-color: var(--vscode-button-hoverBackground);
 }
 
+/* Updated styles for icon buttons with white outline */
+.icon-button {
+    width: auto;
+    background: none;
+    border: 1px solid white;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 5px;
+    margin: 0 5px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.icon-button svg {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+.button-container {
+    /* display: flex; */
+    justify-content: space-between;
+    /* align-items: center; */
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
 #responsesContainer {
     margin-top: 20px;
 }
@@ -98,4 +129,140 @@ button:hover {
 
 .historyToggle label {
     margin-bottom: 0;
+}
+
+#selectedFiles {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Updated styles for the history toggle */
+.historyToggle {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--vscode-input-background);
+    transition: .4s;
+    border: 1px solid var(--vscode-input-border);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 1px;
+    background-color: var(--vscode-input-foreground);
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--vscode-button-background);
+}
+
+input:checked + .slider:before {
+    transform: translateX(19px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.toggle-label {
+    font-size: 0.9em;
+    color: var(--vscode-foreground);
+}
+
+/* Updated styles for selected files */
+#selectedFiles {
+    margin-top: 10px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.selected-files-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.selected-file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--vscode-input-border);
+}
+
+.selected-file-item:last-child {
+    border-bottom: none;
+}
+
+.file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.remove-file {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    color: var(--vscode-errorForeground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 7px;
+}
+
+.remove-file:hover {
+    color: var(--vscode-button-hoverBackground);
+}
+
+.remove-file svg {
+    width: 16px;
+    height: 16px;
+}
+
+.no-files {
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+    padding: 10px;
+    font-style: italic;
 }

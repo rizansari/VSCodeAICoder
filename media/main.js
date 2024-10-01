@@ -1,10 +1,10 @@
 (function () {
     const vscode = acquireVsCodeApi();
-    
+
 
     document.addEventListener('DOMContentLoaded', (event) => {
         let selectedFiles = [];
-        
+
         const codePrompt = document.getElementById('codePrompt');
         const generateBtn = document.getElementById('generateBtn');
         const clearBtn = document.getElementById('clearBtn');
@@ -22,9 +22,9 @@
             const prompt = codePrompt.value;
             const includeHistory = includeHistoryCheckbox.checked;
             if (prompt) {
-                vscode.postMessage({ 
-                    type: 'generateCode', 
-                    value: prompt, 
+                vscode.postMessage({
+                    type: 'generateCode',
+                    value: prompt,
                     files: selectedFiles,
                     includeHistory: includeHistory
                 });
@@ -43,22 +43,37 @@
             vscode.postMessage({ type: 'selectFiles' });
         });
 
+        // Initialize the selected files div with "No files selected" message
+        updateSelectedFilesUI();
+
         function updateSelectedFilesUI() {
             selectedFilesDiv.innerHTML = '';
-            selectedFiles.forEach((file, index) => {
-                const fileElement = document.createElement('div');
-                fileElement.className = 'selected-file';
-                fileElement.innerHTML = `
-                    <button class="remove-file" data-index="${index}">×</button>
-                    <span>${file}</span>
-                `;
-                selectedFilesDiv.appendChild(fileElement);
-            });
+            if (selectedFiles.length > 0) {
+                const filesList = document.createElement('ul');
+                filesList.className = 'selected-files-list';
+                selectedFiles.forEach((file, index) => {
+                    const fileItem = document.createElement('li');
+                    fileItem.className = 'selected-file-item';
+                    fileItem.innerHTML = `
+                        <span class="file-name">${file.split('/').pop()}</span>
+                        <button class="remove-file" data-index="${index}" title="Remove file">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    `;
+                    filesList.appendChild(fileItem);
+                });
+                selectedFilesDiv.appendChild(filesList);
+            } else {
+                selectedFilesDiv.innerHTML = '<p class="no-files">No files selected</p>';
+            }
 
             // Add event listeners for remove buttons
             document.querySelectorAll('.remove-file').forEach(button => {
                 button.addEventListener('click', (e) => {
-                    const index = parseInt(e.target.getAttribute('data-index'));
+                    const index = parseInt(e.target.closest('.remove-file').getAttribute('data-index'));
                     selectedFiles.splice(index, 1);
                     updateSelectedFilesUI();
                 });
