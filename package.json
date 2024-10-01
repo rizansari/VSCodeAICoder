@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -41,6 +41,11 @@
     "configuration": {
       "title": "AI Coder",
       "properties": {
+        "ai-coder.customBackend": {
+          "type": "string",
+          "default": "",
+          "description": "Custom Backend URL"
+        },
         "ai-coder.provider": {
           "type": "string",
           "default": "anthropic",
@@ -63,6 +68,11 @@
           "type": "string",
           "default": "",
           "description": "OpenAI API Key"
+        },
+        "ai-coder.customApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Custom API Key"
         },
         "ai-coder.anthropicModel": {
           "type": "string",
@@ -182,8 +192,8 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.92.0",
     "@types/node": "^14.x.x",
+    "@types/vscode": "^1.92.0",
     "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.30.0",
     "eslint": "^8.13.0",
@@ -191,7 +201,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
-    "openai": "^4.63.0",
-    "marked": "^14.1.2"
+    "axios": "^1.7.7",
+    "marked": "^14.1.2",
+    "openai": "^4.63.0"
   }
 }

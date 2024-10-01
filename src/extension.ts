@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { SidebarProvider } from './SidebarProvider';
 import path = require('path');
+import axios from 'axios';
 
 type ConversationMessage =
     | { role: 'system' | 'user' | 'assistant'; content: string }
@@ -54,9 +55,9 @@ export function activate(context: vscode.ExtensionContext) {
     async function showCurrentDiff() {
         if (currentDiffIndex >= 0 && currentDiffIndex < diffs.length) {
             const diff = diffs[currentDiffIndex];
-            await vscode.commands.executeCommand('vscode.diff', 
-                diff.originalUri, 
-                diff.generatedUri, 
+            await vscode.commands.executeCommand('vscode.diff',
+                diff.originalUri,
+                diff.generatedUri,
                 `${diff.fileName} (${currentDiffIndex + 1}/${diffs.length}) (Original ↔ Generated)`
             );
             updateStatusBarItems();
@@ -116,9 +117,26 @@ export function activate(context: vscode.ExtensionContext) {
             console.log('Generating code for: ' + prompt);
             const config = vscode.workspace.getConfiguration('ai-coder');
             const provider = config.get('provider') as string;
-            const apiKey = config.get(`${provider}ApiKey`) as string;
+            let apiKey = config.get(`${provider}ApiKey`) as string;
             const model = config.get(`${provider}Model`) as string;
             const maxTokens = config.get('maxTokens') as number;
+            const customBackend = config.get('customBackend') as string;
+            let isCustom = false;
+
+            if (customBackend && customBackend.trim() !== '') {
+                isCustom = true;
+                apiKey = config.get('customApiKey') as string;
+
+                if (!apiKey || apiKey.trim() === '') {
+                    vscode.window.showWarningMessage(`Please set your Custom API Key in the extension settings.`);
+                    return;
+                }
+            } else {
+                if (!apiKey || apiKey.trim() === '') {
+                    vscode.window.showWarningMessage(`Please set your ${provider.toUpperCase()} API Key in the extension settings.`);
+                    return;
+                }
+            }
 
             if (!apiKey || apiKey.trim() === '') {
                 vscode.window.showWarningMessage(`Please set your ${provider.toUpperCase()} API Key in the extension settings.`);
@@ -160,15 +178,22 @@ export function activate(context: vscode.ExtensionContext) {
                     messages[messages.length - 1].content += `\n\nHere are the contents of the files:\n\n${fileContents.join('\n')}`;
                 }
 
-                if (provider === 'anthropic') {
-                    await generateWithAnthropic(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
-                        fullResponse += text;
-                    });
-                } else if (provider === 'openai') {
-                    await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                if (isCustom) {
+                    await generateWithAIProxy(apiKey, customBackend, provider, model, maxTokens, messages, responseId, webviewView, (text) => {
                         fullResponse += text;
                     });
                 } else {
+                    // if (provider === 'anthropic') {
+                    //     await generateWithAnthropic(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                    //         fullResponse += text;
+                    //     });
+                    // } else if (provider === 'openai') {
+                    //     await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                    //         fullResponse += text;
+                    //     });
+                    // } else {
+                    //     throw new Error('Unsupported provider');
+                    // }
                     throw new Error('Unsupported provider');
                 }
 
@@ -475,6 +500,51 @@ async function generateWithOpenAI(
                 value: content
             });
         }
+    }
+}
+
+async function generateWithAIProxy(
+    apiKey: string,
+    proxyUrl: string,
+    provider: string,
+    model: string,
+    maxTokens: number,
+    messages: ConversationMessage[],
+    responseId: string,
+    webviewView: vscode.WebviewView,
+    onChunk: (text: string) => void
+) {
+    // const proxyUrl = 'http://localhost:3000/chat'; // Update this URL if your proxy is hosted elsewhere
+
+    try {
+        const response = await axios.post(proxyUrl, {
+            apiKey,
+            provider,
+            model,
+            maxTokens,
+            messages
+        }, {
+            responseType: 'stream'
+        });
+
+        response.data.on('data', (chunk: Buffer) => {
+            const text = chunk.toString('utf-8');
+            onChunk(text);
+            webviewView.webview.postMessage({
+                type: 'updateGeneratedCode',
+                id: responseId,
+                value: text
+            });
+        });
+
+        await new Promise((resolve, reject) => {
+            response.data.on('end', resolve);
+            response.data.on('error', reject);
+        });
+
+    } catch (error) {
+        console.error('Error calling AI proxy:', error);
+        throw error;
     }
 }
 
