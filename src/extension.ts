@@ -183,18 +183,17 @@ export function activate(context: vscode.ExtensionContext) {
                         fullResponse += text;
                     });
                 } else {
-                    // if (provider === 'anthropic') {
-                    //     await generateWithAnthropic(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
-                    //         fullResponse += text;
-                    //     });
-                    // } else if (provider === 'openai') {
-                    //     await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
-                    //         fullResponse += text;
-                    //     });
-                    // } else {
-                    //     throw new Error('Unsupported provider');
-                    // }
-                    throw new Error('Unsupported provider');
+                    if (provider === 'anthropic') {
+                        await generateWithAnthropic(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                            fullResponse += text;
+                        });
+                    } else if (provider === 'openai') {
+                        await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                            fullResponse += text;
+                        });
+                    } else {
+                        throw new Error('Unsupported provider');
+                    }
                 }
 
                 // Send the final, complete response

@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -153,14 +153,6 @@
       {
         "command": "ai-coder.changeMaxTokens",
         "title": "AI Coder: Change Max Tokens"
-      },
-      {
-        "command": "ai-coder.acceptChanges",
-        "title": "AI Coder: Accept Changes"
-      },
-      {
-        "command": "ai-coder.rejectChanges",
-        "title": "AI Coder: Reject Changes"
       }
     ],
     "viewsContainers": {
