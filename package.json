@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
