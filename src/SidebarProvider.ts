@@ -20,6 +20,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
+        // Listen for when the view becomes visible
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible) {
+                this.updateConfigInfo(webviewView);
+            }
+        });
+
         // Listen for configuration changes
         vscode.workspace.onDidChangeConfiguration(() => {
             this.updateConfigInfo(webviewView);
@@ -52,25 +59,58 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 }
+                case "changeProvider": {
+                    await vscode.workspace.getConfiguration().update('ai-coder.provider', data.value, vscode.ConfigurationTarget.Global);
+                    this.updateConfigInfo(webviewView);
+                    break;
+                }
+                case "changeModel": {
+                    const provider = vscode.workspace.getConfiguration().get('ai-coder.provider');
+                    const setting = provider === 'openai' ? 'ai-coder.openaiModel' : 'ai-coder.anthropicModel';
+                    await vscode.workspace.getConfiguration().update(setting, data.value, vscode.ConfigurationTarget.Global);
+                    this.updateConfigInfo(webviewView);
+                    break;
+                }
+                case "changeMaxTokens": {
+                    await vscode.workspace.getConfiguration().update('ai-coder.maxTokens', parseInt(data.value), vscode.ConfigurationTarget.Global);
+                    this.updateConfigInfo(webviewView);
+                    break;
+                }
+                case "requestConfig": {
+                    // Handle request for configuration data
+                    this.updateConfigInfo(webviewView);
+                    break;
+                }
             }
         });
     }
 
-    private updateConfigInfo(webviewView: vscode.WebviewView) {
-        const provider = vscode.workspace.getConfiguration().get('ai-coder.provider');
-        let model = "";
-        if (provider === 'openai') {
-            model = vscode.workspace.getConfiguration().get('ai-coder.openaiModel')!;
-        } else if (provider === 'anthropic') {
-            model = vscode.workspace.getConfiguration().get('ai-coder.anthropicModel')!;
-        }
-        const maxTokens = vscode.workspace.getConfiguration().get('ai-coder.maxTokens');
+    private async updateConfigInfo(webviewView: vscode.WebviewView) {
+        const config = vscode.workspace.getConfiguration('ai-coder');
+        const provider = config.get('provider');
+        const openaiModel = config.get('openaiModel');
+        const anthropicModel = config.get('anthropicModel');
+        const maxTokens = config.get('maxTokens');
+
+        const defaultSettingsSchemaResource = vscode.Uri.parse('vscode://schemas/settings/default');
+        const textDocument = await vscode.workspace.openTextDocument(defaultSettingsSchemaResource);
+        const jsonObject = JSON.parse(textDocument.getText());
+
+        const providers = jsonObject.properties['ai-coder.provider'].enum;
+        const openaiModels = jsonObject.properties['ai-coder.openaiModel'].enum;
+        const anthropicModels = jsonObject.properties['ai-coder.anthropicModel'].enum;
+        const maxTokensOptions = jsonObject.properties['ai-coder.maxTokens'].enum;
 
         webviewView.webview.postMessage({
             type: 'updateConfig',
             provider,
-            model,
-            maxTokens
+            openaiModel,
+            anthropicModel,
+            maxTokens,
+            providers,
+            openaiModels,
+            anthropicModels,
+            maxTokensOptions
         });
     }
 
@@ -107,9 +147,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 			</head>
 			<body>
                 <div id="configInfo">
-					<span id="provider">Provider: </span>
-					<span id="model">Model: </span>
-					<span id="maxTokens">Max Tokens: </span>
+                    <div class="config-item">
+                        <label for="providerSelect">Provider:</label>
+                        <select id="providerSelect"></select>
+                    </div>
+                    <div class="config-item">
+                        <label for="modelSelect">Model:</label>
+                        <select id="modelSelect"></select>
+                    </div>
+                    <div class="config-item">
+                        <label for="maxTokensSelect">Max Tokens:</label>
+                        <select id="maxTokensSelect"></select>
+                    </div>
 				</div>
 				<textarea type="text" id="codePrompt" placeholder="Enter a description of the code you want to generate"></textarea>
                     <div class="button-container">
@@ -146,6 +195,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     <span class="toggle-label">Include conversation history</span>
                 </div>
                 <div id="responsesContainer"></div>
+                <script nonce="${nonce}">
+                    // Request configuration data when the webview becomes visible
+                    document.addEventListener('visibilitychange', function() {
+                        if (!document.hidden) {
+                            vscode.postMessage({ type: 'requestConfig' });
+                        }
+                    });
+                </script>
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;

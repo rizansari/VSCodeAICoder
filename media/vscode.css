@@ -94,10 +94,33 @@ button:hover {
 
 #configInfo {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.config-item {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 10px;
+}
+
+.config-item label {
+    margin-bottom: 5px;
     font-size: 0.9em;
     color: var(--vscode-descriptionForeground);
+}
+
+select {
+    width: 100%;
+    padding: 5px;
+    background-color: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: 2px;
+}
+
+select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
 }
 
 .selected-file {

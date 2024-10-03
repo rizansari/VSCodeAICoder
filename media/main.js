@@ -43,6 +43,18 @@
             vscode.postMessage({ type: 'selectFiles' });
         });
 
+        document.getElementById('providerSelect').addEventListener('change', (event) => {
+            vscode.postMessage({ type: 'changeProvider', value: event.target.value });
+        });
+        
+        document.getElementById('modelSelect').addEventListener('change', (event) => {
+            vscode.postMessage({ type: 'changeModel', value: event.target.value });
+        });
+        
+        document.getElementById('maxTokensSelect').addEventListener('change', (event) => {
+            vscode.postMessage({ type: 'changeMaxTokens', value: event.target.value });
+        });
+
         // Initialize the selected files div with "No files selected" message
         updateSelectedFilesUI();
 
@@ -110,6 +122,8 @@
             return marked.parse(text, { renderer: renderer });
         }
 
+        let currentProvider, currentModel, currentMaxTokens;
+
         // Handle the message inside the webview
         window.addEventListener('message', event => {
             const message = event.data;
@@ -152,11 +166,27 @@
                     break;
 
                 case 'updateConfig':
-                    providerSpan.textContent = `Provider: ${message.provider}`;
-                    modelSpan.textContent = `Model: ${message.model}`;
-                    maxTokensSpan.textContent = `Max Tokens: ${message.maxTokens}`;
+                    currentProvider = message.provider;
+                    currentModel = message[`${message.provider}Model`];
+                    currentMaxTokens = message.maxTokens;
+
+                    updateDropdown('providerSelect', message.providers, currentProvider);
+                    updateDropdown('modelSelect', message[`${currentProvider}Models`], currentModel);
+                    updateDropdown('maxTokensSelect', message.maxTokensOptions, currentMaxTokens);
                     break;
             }
         });
+
+        function updateDropdown(id, options, currentValue) {
+            const select = document.getElementById(id);
+            select.innerHTML = '';
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                optionElement.selected = option === currentValue;
+                select.appendChild(optionElement);
+            });
+        }
     });
 }());
