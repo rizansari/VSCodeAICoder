@@ -130,6 +130,26 @@
             "65536 tokens"
           ],
           "description": "Maximum number of tokens to generate"
+        },
+        "ai-coder.openDiffView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Open Diff View"
+        },
+        "ai-coder.diffViewAutoMerge": {
+          "type": "boolean",
+          "default": false,
+          "description": "Diff View Auto Merge"
+        },
+        "ai-coder.autoSaveGeneratedCode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto Save Generated Code"
+        },
+        "ai-coder.saveGeneratedCodePath": {
+          "type": "string",
+          "default": "codegen",
+          "description": "Path to Save Generated Code relative to workspace"
         }
       }
     },

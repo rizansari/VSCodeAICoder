@@ -16,7 +16,7 @@ type ConversationMessage =
 let conversationHistory: ConversationMessage[] = [];
 
 export async function generateCode(prompt: string, files: string[], webviewView: vscode.WebviewView, includeHistory: boolean) {
-    
+
     const context = ExtensionContext.getInstance().getContext();
 
     const config = vscode.workspace.getConfiguration('ai-coder');
@@ -25,6 +25,11 @@ export async function generateCode(prompt: string, files: string[], webviewView:
     const model = config.get(`${provider}Model`) as string;
     const maxTokens = config.get('maxTokens') as number;
     const customBackend = config.get('customBackend') as string;
+    const isOpenDiffView = config.get('openDiffView') as boolean;
+    const isDiffViewAutoMerge = config.get('diffViewAutoMerge') as boolean;
+    const isAutoSaveGeneratedCode = config.get('autoSaveGeneratedCode') as boolean;
+    const saveGeneratedCodePath = config.get('saveGeneratedCodePath') as string;
+
     let isCustom = false;
 
     if (customBackend && customBackend.trim() !== '') {
@@ -114,43 +119,75 @@ export async function generateCode(prompt: string, files: string[], webviewView:
         // add prompt to the top of the response with new line markdown
         let fullResponseEx = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
 
-        // open new untitled document with the generated code
-        const doc = await vscode.workspace.openTextDocument({
-            content: fullResponseEx, language: 'markdown'
-        });
-        await vscode.window.showTextDocument(doc);
 
-        const codeBlocks = extractCodeBlocks(fullResponse, files);
 
-        resetDiffs();
+        if (isAutoSaveGeneratedCode) {
+            // get workspace path
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            let workspacePath = '';
+            if (workspaceFolders) {
+                workspacePath = workspaceFolders[0].uri.fsPath;
+            } else {
+                // default to home directory
+                workspacePath = require('os').homedir();
+            }
+            
+            // save the generated code to a file
+            const savePath = path.join(workspacePath, saveGeneratedCodePath, `generated-code-${Date.now()}.md`);
+            await fs.promises.writeFile
+                (savePath, fullResponseEx);
+            vscode.window.showInformationMessage(`Generated code saved to ${savePath}`);
 
-        for (const file of files) {
-            const originalUri = vscode.Uri.file(file);
-            const fileName = path.basename(file);
-            const scheme = `generated-${encodeURIComponent(fileName)}`;
-            const generatedUri = vscode.Uri.parse(`${scheme}:${fileName}`);
-
-            const mergedCode = mergeCode(fs.readFileSync(file, 'utf8'), codeBlocks[file] || '');
-
-            addDiff({
-                originalUri,
-                generatedUri,
-                fileName,
-                content: mergedCode || ''
+            // open the saved file
+            const doc = await vscode.workspace.openTextDocument(savePath);
+            await vscode.window.showTextDocument(doc);
+        } else {
+            // open new untitled document with the generated code
+            const doc = await vscode.workspace.openTextDocument({
+                content: fullResponseEx, language: 'markdown'
             });
-
-          
-            // Register a TextDocumentContentProvider for the generated content
-            context.subscriptions.push(
-                vscode.workspace.registerTextDocumentContentProvider(scheme, {
-                    provideTextDocumentContent: () => mergedCode || ''
-                })
-            );
+            await vscode.window.showTextDocument(doc);
         }
 
-        if (diffExists()) {
-            resetCurrentDiffIndex();
-            showCurrentDiff();
+        if (isOpenDiffView) {
+            const codeBlocks = extractCodeBlocks(fullResponse, files);
+
+            resetDiffs();
+
+            for (const file of files) {
+                const originalUri = vscode.Uri.file(file);
+                const fileName = path.basename(file);
+                const scheme = `generated-${encodeURIComponent(fileName)}`;
+                const generatedUri = vscode.Uri.parse(`${scheme}:${fileName}`);
+
+                let mergedCode = '';
+
+                if (isDiffViewAutoMerge) {
+                    mergedCode = mergeCode(fs.readFileSync(file, 'utf8'), codeBlocks[file] || '');
+                } else {
+                    mergedCode = codeBlocks[file] || '';
+                }
+
+                addDiff({
+                    originalUri,
+                    generatedUri,
+                    fileName,
+                    content: mergedCode || ''
+                });
+
+
+                // Register a TextDocumentContentProvider for the generated content
+                context.subscriptions.push(
+                    vscode.workspace.registerTextDocumentContentProvider(scheme, {
+                        provideTextDocumentContent: () => mergedCode || ''
+                    })
+                );
+            }
+
+            if (diffExists()) {
+                resetCurrentDiffIndex();
+                showCurrentDiff();
+            }
         }
 
     } catch (error: any) {
