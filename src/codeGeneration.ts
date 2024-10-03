@@ -134,6 +134,10 @@ export async function generateCode(prompt: string, files: string[], webviewView:
             
             // save the generated code to a file
             const savePath = path.join(workspacePath, saveGeneratedCodePath, `generated-code-${Date.now()}.md`);
+
+            // create the directory if it doesn't exist
+            await fs.promises.mkdir(path.dirname(savePath), { recursive: true });
+
             await fs.promises.writeFile
                 (savePath, fullResponseEx);
             vscode.window.showInformationMessage(`Generated code saved to ${savePath}`);
