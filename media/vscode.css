@@ -15,8 +15,11 @@ textarea {
     width: 100%;
     margin-bottom: 10px;
     padding: 5px;
-    height: 100px; /* Increased height */
+    height: 100px;
     resize: vertical;
+    background-color: #2a2a2a; /* Grayish color */
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
 }
 
 button {
@@ -31,7 +34,6 @@ button:hover {
     background-color: var(--vscode-button-hoverBackground);
 }
 
-/* Updated styles for icon buttons with white outline */
 .icon-button {
     width: auto;
     background: none;
@@ -55,11 +57,15 @@ button:hover {
 }
 
 .button-container {
-    /* display: flex; */
+    display: flex;
     justify-content: space-between;
-    /* align-items: center; */
+    align-items: center;
     margin-top: 5px;
     margin-bottom: 5px;
+}
+
+.left-buttons, .right-buttons {
+    display: flex;
 }
 
 #responsesContainer {
