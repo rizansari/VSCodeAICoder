@@ -8,6 +8,7 @@ import path = require('path');
 import { DiffInfo } from './types';
 import { addDiff, diffExists, resetCurrentDiffIndex, resetDiffs, showCurrentDiff } from './diffViewer';
 import { ExtensionContext } from './extensionContext';
+import { performance } from 'perf_hooks';
 
 type ConversationMessage =
     | { role: 'system' | 'user' | 'assistant'; content: string }
@@ -75,6 +76,9 @@ export async function generateCode(prompt: string, files: string[], webviewView:
             messages = [{ role: 'user', content: prompt }];
         }
 
+        const startTime = performance.now();
+
+
         let fullPrompt;
 
         if (files.length > 0) {
@@ -116,9 +120,32 @@ export async function generateCode(prompt: string, files: string[], webviewView:
         conversationHistory.push({ role: 'user', content: prompt });
         conversationHistory.push({ role: 'assistant', content: fullResponse });
 
-        // add prompt to the top of the response with new line markdown
-        let fullResponseEx = `PROMPT\n======\n${prompt}\n\nMODEL\n=====\n${model}\n\n\nRESPONSE\n========\n\n${fullResponse}`;
+        const endTime = performance.now();
+        const generationTime = Math.round(endTime - startTime);
 
+        // Assuming you have a function to count tokens
+        const tokenCount = countTokens(fullResponse);
+
+        // add prompt to the top of the response with new line markdown
+        let fullResponseEx = `
+# AI Code Generation Results
+
+## Metadata
+
+- **Model**: ${model}
+- **Timestamp**: ${new Date().toLocaleString()}
+- **Token Count**: ${tokenCount}
+- **Generation Time**: ${generationTime} ms
+
+## Prompt
+
+${prompt}
+
+## Generated Response
+
+${fullResponse}
+
+`;
 
 
         if (isAutoSaveGeneratedCode) {
@@ -131,7 +158,7 @@ export async function generateCode(prompt: string, files: string[], webviewView:
                 // default to home directory
                 workspacePath = require('os').homedir();
             }
-            
+
             // save the generated code to a file
             const savePath = path.join(workspacePath, saveGeneratedCodePath, `generated-code-${Date.now()}.md`);
 
@@ -144,13 +171,18 @@ export async function generateCode(prompt: string, files: string[], webviewView:
 
             // open the saved file
             const doc = await vscode.workspace.openTextDocument(savePath);
-            await vscode.window.showTextDocument(doc);
+            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+            // Open the Markdown preview in the adjacent editor group
+            await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+            
         } else {
             // open new untitled document with the generated code
             const doc = await vscode.workspace.openTextDocument({
                 content: fullResponseEx, language: 'markdown'
             });
-            await vscode.window.showTextDocument(doc);
+            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+            // Open the Markdown preview in the adjacent editor group
+            await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
         }
 
         if (isOpenDiffView) {
@@ -327,4 +359,11 @@ async function generateWithAIProxy(
         console.error('Error calling AI proxy:', error);
         throw error;
     }
+}
+
+
+function countTokens(fullResponse: string): number {
+    // Simple tokenization by splitting on whitespace and punctuation
+    const tokens = fullResponse.split(/\s+|[.,!?;:(){}[\]]+/).filter(token => token.length > 0);
+    return tokens.length;
 }
