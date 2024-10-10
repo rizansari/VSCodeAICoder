@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -143,13 +143,26 @@
         },
         "ai-coder.autoSaveGeneratedCode": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Auto Save Generated Code"
         },
         "ai-coder.saveGeneratedCodePath": {
           "type": "string",
           "default": "codegen",
           "description": "Path to Save Generated Code relative to workspace"
+        },
+        "ai-coder.resultView": {
+          "type": "string",
+          "default": "webview",
+          "enum": [
+            "webview",
+            "markdown"
+          ],
+          "enumDescriptions": [
+            "Webview",
+            "Markdown"
+          ],
+          "description": "Result View"
         }
       }
     },

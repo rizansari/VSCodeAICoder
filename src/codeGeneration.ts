@@ -16,6 +16,11 @@ type ConversationMessage =
 
 let conversationHistory: ConversationMessage[] = [];
 
+interface Block {
+    type: 'text' | 'code';
+    content: string;
+  }
+
 export async function generateCode(prompt: string, files: string[], webviewView: vscode.WebviewView, includeHistory: boolean) {
 
     const context = ExtensionContext.getInstance().getContext();
@@ -30,6 +35,7 @@ export async function generateCode(prompt: string, files: string[], webviewView:
     const isDiffViewAutoMerge = config.get('diffViewAutoMerge') as boolean;
     const isAutoSaveGeneratedCode = config.get('autoSaveGeneratedCode') as boolean;
     const saveGeneratedCodePath = config.get('saveGeneratedCodePath') as string;
+    const resultView = config.get('resultView') as string;
 
     let isCustom = false;
 
@@ -169,20 +175,31 @@ ${fullResponse}
                 (savePath, fullResponseEx);
             vscode.window.showInformationMessage(`Generated code saved to ${savePath}`);
 
-            // open the saved file
-            const doc = await vscode.workspace.openTextDocument(savePath);
-            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-            // Open the Markdown preview in the adjacent editor group
-            await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
-            
+            if (resultView === 'webview') {
+                const blocks = separateBlocks(fullResponse);
+                const htmlContent = generateHtmlContent(model, tokenCount, generationTime, prompt, blocks);
+                showWebviewPanel(htmlContent);
+            } else {
+                // open the saved file
+                const doc = await vscode.workspace.openTextDocument(savePath);
+                await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+                // Open the Markdown preview in the adjacent editor group
+                await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+            }
         } else {
-            // open new untitled document with the generated code
-            const doc = await vscode.workspace.openTextDocument({
-                content: fullResponseEx, language: 'markdown'
-            });
-            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-            // Open the Markdown preview in the adjacent editor group
-            await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+            if (resultView === 'webview') {
+                const blocks = separateBlocks(fullResponse);
+                const htmlContent = generateHtmlContent(model, tokenCount, generationTime, prompt, blocks);
+                showWebviewPanel(htmlContent);
+            } else {
+                // open new untitled document with the generated code
+                const doc = await vscode.workspace.openTextDocument({
+                    content: fullResponseEx, language: 'markdown'
+                });
+                await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+                // Open the Markdown preview in the adjacent editor group
+                await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+            }
         }
 
         if (isOpenDiffView) {
@@ -361,9 +378,109 @@ async function generateWithAIProxy(
     }
 }
 
+function separateBlocks(fullResponse: string): Block[] {
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const blocks: Block[] = [];
+    let lastIndex = 0;
+  
+    // Find all code blocks
+    let match;
+    while ((match = codeBlockRegex.exec(fullResponse)) !== null) {
+      // Add text block before the code block (if any)
+      if (match.index > lastIndex) {
+        blocks.push({
+          type: 'text',
+          content: fullResponse.slice(lastIndex, match.index).trim()
+        });
+      }
+  
+      // Add the code block
+      blocks.push({
+        type: 'code',
+        content: match[0].trim()
+      });
+  
+      lastIndex = match.index + match[0].length;
+    }
+  
+    // Add any remaining text after the last code block
+    if (lastIndex < fullResponse.length) {
+      blocks.push({
+        type: 'text',
+        content: fullResponse.slice(lastIndex).trim()
+      });
+    }
+  
+    return blocks;
+  }
 
 function countTokens(fullResponse: string): number {
     // Simple tokenization by splitting on whitespace and punctuation
     const tokens = fullResponse.split(/\s+|[.,!?;:(){}[\]]+/).filter(token => token.length > 0);
     return tokens.length;
+}
+
+function separateTextAndCode(fullResponse: string): { textContent: string, codeBlocks: string[] } {
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const codeBlocks = fullResponse.match(codeBlockRegex) || [];
+    const textContent = fullResponse.replace(codeBlockRegex, '').trim();
+    return { textContent, codeBlocks };
+}
+
+function generateHtmlContent(model: string, tokenCount: number, generationTime: number, prompt: string, blocks: Block[]): string {
+    return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>AI Code Generation Results</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+                h1, h2 { color: #666; }
+                pre { padding: 10px; border-radius: 5px; overflow-x: auto; }
+                .text-block { margin-bottom: 15px; }
+                .code-block { margin-bottom: 20px; }
+                .prompt { padding: 10px; border-left: 3px solid #ccc; }
+            </style>
+        </head>
+        <body>
+            <h1>AI Code Generation Results</h1>
+            <h2>Metadata</h2>
+            <ul>
+                <li><strong>Model:</strong> ${model}</li>
+                <li><strong>Timestamp:</strong> ${new Date().toLocaleString()}</li>
+                <li><strong>Token Count:</strong> ${tokenCount}</li>
+                <li><strong>Generation Time:</strong> ${generationTime} ms</li>
+            </ul>
+            <h2>Prompt</h2>
+            <div class="prompt">${prompt}</div>
+            <h2>Generated Response</h2>
+            ${blocks.map((block, index) => {
+                if (block.type === 'text') {
+                    return `<div class="text-block">${block.content}</div>`;
+                } else {
+                    // remove ``` and language identifier from code block
+                    const content = block.content.replace(/^```.*\n/, '').replace(/```$/, '');
+                    
+                    return `
+                        <div class="code-block">
+                            <pre><code>${content}</code></pre>
+                        </div>
+                    `;
+                }
+            }).join('')}
+        </body>
+        </html>
+    `;
+}
+
+function showWebviewPanel(htmlContent: string) {
+    const panel = vscode.window.createWebviewPanel(
+        'aiCodeGeneration',
+        'AI Code Generation Results',
+        vscode.ViewColumn.Beside,
+        {}
+    );
+    panel.webview.html = htmlContent;
 }
