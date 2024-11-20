@@ -316,7 +316,7 @@ async function generateWithOpenAI(
     const stream = await openai.chat.completions.create({
         model: model,
         messages: openaiMessages,
-        max_tokens: maxTokens,
+        max_completion_tokens: maxTokens,
         stream: true,
     });
 
