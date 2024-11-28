@@ -19,7 +19,7 @@ let conversationHistory: ConversationMessage[] = [];
 interface Block {
     type: 'text' | 'code';
     content: string;
-  }
+}
 
 export async function generateCode(prompt: string, files: string[], webviewView: vscode.WebviewView, includeHistory: boolean) {
 
@@ -183,8 +183,11 @@ ${fullResponse}
                 // open the saved file
                 const doc = await vscode.workspace.openTextDocument(savePath);
                 await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-                // Open the Markdown preview in the adjacent editor group
-                await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+
+                if (resultView === 'markdown-preview') {
+                    // Open the Markdown preview in the adjacent editor group
+                    await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+                }
             }
         } else {
             if (resultView === 'webview') {
@@ -197,8 +200,11 @@ ${fullResponse}
                     content: fullResponseEx, language: 'markdown'
                 });
                 await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-                // Open the Markdown preview in the adjacent editor group
-                await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+
+                if (resultView === 'markdown-preview') {
+                    // Open the Markdown preview in the adjacent editor group
+                    await vscode.commands.executeCommand("markdown.showPreviewToSide", doc.uri);
+                }
             }
         }
 
@@ -382,37 +388,37 @@ function separateBlocks(fullResponse: string): Block[] {
     const codeBlockRegex = /```[\s\S]*?```/g;
     const blocks: Block[] = [];
     let lastIndex = 0;
-  
+
     // Find all code blocks
     let match;
     while ((match = codeBlockRegex.exec(fullResponse)) !== null) {
-      // Add text block before the code block (if any)
-      if (match.index > lastIndex) {
+        // Add text block before the code block (if any)
+        if (match.index > lastIndex) {
+            blocks.push({
+                type: 'text',
+                content: fullResponse.slice(lastIndex, match.index).trim()
+            });
+        }
+
+        // Add the code block
         blocks.push({
-          type: 'text',
-          content: fullResponse.slice(lastIndex, match.index).trim()
+            type: 'code',
+            content: match[0].trim()
         });
-      }
-  
-      // Add the code block
-      blocks.push({
-        type: 'code',
-        content: match[0].trim()
-      });
-  
-      lastIndex = match.index + match[0].length;
+
+        lastIndex = match.index + match[0].length;
     }
-  
+
     // Add any remaining text after the last code block
     if (lastIndex < fullResponse.length) {
-      blocks.push({
-        type: 'text',
-        content: fullResponse.slice(lastIndex).trim()
-      });
+        blocks.push({
+            type: 'text',
+            content: fullResponse.slice(lastIndex).trim()
+        });
     }
-  
+
     return blocks;
-  }
+}
 
 function countTokens(fullResponse: string): number {
     // Simple tokenization by splitting on whitespace and punctuation
@@ -457,19 +463,19 @@ function generateHtmlContent(model: string, tokenCount: number, generationTime: 
             <div class="prompt">${prompt}</div>
             <h2>Generated Response</h2>
             ${blocks.map((block, index) => {
-                if (block.type === 'text') {
-                    return `<div class="text-block">${block.content}</div>`;
-                } else {
-                    // remove ``` and language identifier from code block
-                    const content = block.content.replace(/^```.*\n/, '').replace(/```$/, '');
-                    
-                    return `
+        if (block.type === 'text') {
+            return `<div class="text-block">${block.content}</div>`;
+        } else {
+            // remove ``` and language identifier from code block
+            const content = block.content.replace(/^```.*\n/, '').replace(/```$/, '');
+
+            return `
                         <div class="code-block">
                             <pre><code>${content}</code></pre>
                         </div>
                     `;
-                }
-            }).join('')}
+        }
+    }).join('')}
         </body>
         </html>
     `;

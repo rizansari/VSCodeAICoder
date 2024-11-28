@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -76,7 +76,7 @@
         },
         "ai-coder.anthropicModel": {
           "type": "string",
-          "default": "claude-3-haiku-20240307",
+          "default": "claude-3-5-haiku-latest",
           "enum": [
             "claude-3-5-haiku-latest",
             "claude-3-5-sonnet-latest",
@@ -156,11 +156,13 @@
           "default": "webview",
           "enum": [
             "webview",
-            "markdown"
+            "markdown",
+            "markdown-preview"
           ],
           "enumDescriptions": [
             "Webview",
-            "Markdown"
+            "Markdown",
+            "Markdown Preview"
           ],
           "description": "Result View"
         }
