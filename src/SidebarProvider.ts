@@ -66,7 +66,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 }
                 case "changeModel": {
                     const provider = vscode.workspace.getConfiguration().get('ai-coder.provider');
-                    const setting = provider === 'openai' ? 'ai-coder.openaiModel' : 'ai-coder.anthropicModel';
+                    const setting = provider === 'openai' ? 'openaiModel' : provider === 'anthropic' ? 'anthropicModel' : 'deepseekModel';
                     await vscode.workspace.getConfiguration().update(setting, data.value, vscode.ConfigurationTarget.Global);
                     this.updateConfigInfo(webviewView);
                     break;
@@ -90,6 +90,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const provider = config.get('provider');
         const openaiModel = config.get('openaiModel');
         const anthropicModel = config.get('anthropicModel');
+        const deepseekModel = config.get('deepseekModel');
         const maxTokens = config.get('maxTokens');
 
         const defaultSettingsSchemaResource = vscode.Uri.parse('vscode://schemas/settings/default');
@@ -99,6 +100,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const providers = jsonObject.properties['ai-coder.provider'].enum;
         const openaiModels = jsonObject.properties['ai-coder.openaiModel'].enum;
         const anthropicModels = jsonObject.properties['ai-coder.anthropicModel'].enum;
+        const deepseekModels = jsonObject.properties['ai-coder.deepseekModel'].enum;
         const maxTokensOptions = jsonObject.properties['ai-coder.maxTokens'].enum;
 
         webviewView.webview.postMessage({
@@ -106,10 +108,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             provider,
             openaiModel,
             anthropicModel,
+            deepseekModel,
             maxTokens,
             providers,
             openaiModels,
             anthropicModels,
+            deepseekModels,
             maxTokensOptions
         });
     }

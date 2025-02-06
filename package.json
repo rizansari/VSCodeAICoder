@@ -1,8 +1,8 @@
 {
   "name": "ai-coder",
   "displayName": "AI Coder",
-  "description": "Code using OpenAI and Anthropic",
-  "version": "0.0.16",
+  "description": "Code using OpenAI, Anthropic, and DeepSeek",
+  "version": "0.0.17",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -21,6 +21,7 @@
     "openai",
     "anthropic",
     "claude",
+    "deepseek",
     "programming-languages",
     "code-completion",
     "ai-powered-coding",
@@ -51,13 +52,15 @@
           "default": "anthropic",
           "enum": [
             "anthropic",
-            "openai"
+            "openai",
+            "deepseek"
           ],
           "enumDescriptions": [
             "Use Anthropic API",
-            "Use OpenAI API"
+            "Use OpenAI API",
+            "Use DeepSeek API"
           ],
-          "description": "Choose between Anthropic and OpenAI as the AI provider"
+          "description": "Choose between Anthropic, OpenAI, and DeepSeek as the AI provider"
         },
         "ai-coder.anthropicApiKey": {
           "type": "string",
@@ -68,6 +71,11 @@
           "type": "string",
           "default": "",
           "description": "OpenAI API Key"
+        },
+        "ai-coder.deepseekApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "DeepSeek API Key"
         },
         "ai-coder.customApiKey": {
           "type": "string",
@@ -97,16 +105,35 @@
             "gpt-4o",
             "o1-preview",
             "o1-mini",
-            "gpt-4-turbo"
+            "gpt-4-turbo",
+            "chatgpt-4o-latest",
+            "o1",
+            "o3-mini"
           ],
           "enumDescriptions": [
             "GPT-4o Mini",
             "GPT-4o",
             "O1 Preview",
             "O1 Mini",
-            "GPT-4 Turbo"
+            "GPT-4 Turbo",
+            "ChatGPT 4o Latest",
+            "O1",
+            "O3 Mini"
           ],
           "description": "OpenAI Model to use"
+        },
+        "ai-coder.deepseekModel": {
+          "type": "string",
+          "default": "deepseek-chat",
+          "enum": [
+            "deepseek-chat",
+            "deepseek-reasoner"
+          ],
+          "enumDescriptions": [
+            "DeepSeek Chat",
+            "DeepSeek Reasoner"
+          ],
+          "description": "DeepSeek Model to use"
         },
         "ai-coder.maxTokens": {
           "type": "number",
@@ -184,6 +211,10 @@
       {
         "command": "ai-coder.selectOpenAIModel",
         "title": "AI Coder: Change OpenAI Model"
+      },
+      {
+        "command": "ai-coder.selectDeepSeekModel",
+        "title": "AI Coder: Change DeepSeek Model"
       },
       {
         "command": "ai-coder.changeMaxTokens",

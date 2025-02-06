@@ -93,6 +93,36 @@ export async function selectOpenAIModel() {
     }
 }
 
+export async function selectDeepseekModel() {
+    const defaultSettingsSchemaResource = vscode.Uri.parse('vscode://schemas/settings/default');
+    const textDocument = await vscode.workspace.openTextDocument(defaultSettingsSchemaResource);
+    const jsonObject = JSON.parse(textDocument.getText());
+
+    const models = jsonObject.properties['ai-coder.deepseekModel'].enum;
+    const modelDescriptions = jsonObject.properties['ai-coder.deepseekModel'].enumDescriptions;
+
+    const config = vscode.workspace.getConfiguration('ai-coder');
+
+
+    // create model options
+    const modelOptions = models.map((model: string, index: number) => {
+        return {
+            label: model,
+            description: modelDescriptions[index]
+        };
+    });
+
+    const selectedModel: any = await vscode.window.showQuickPick(modelOptions, {
+        placeHolder: 'Select the DeepSeek model to use',
+    });
+
+
+    if (selectedModel) {
+        await config.update('deepseekModel', selectedModel.label, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Switched to the '${selectedModel.label}' model.`);
+    }
+}
+
 export async function changeMaxTokens() {
     const defaultSettingsSchemaResource = vscode.Uri.parse('vscode://schemas/settings/default');
     const textDocument = await vscode.workspace.openTextDocument(defaultSettingsSchemaResource);

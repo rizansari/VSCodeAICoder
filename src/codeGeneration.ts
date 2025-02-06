@@ -107,7 +107,11 @@ export async function generateCode(prompt: string, files: string[], webviewView:
                     fullResponse += text;
                 });
             } else if (provider === 'openai') {
-                await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, (text) => {
+                await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, '', (text) => {
+                    fullResponse += text;
+                });
+            } else if (provider === 'deepseek') {
+                await generateWithOpenAI(apiKey, model, maxTokens, messages, responseId, webviewView, 'https://api.deepseek.com', (text) => {
                     fullResponse += text;
                 });
             } else {
@@ -300,9 +304,13 @@ async function generateWithOpenAI(
     messages: ConversationMessage[],
     responseId: string,
     webviewView: vscode.WebviewView,
+    apiUrl: string = '',
     onChunk: (text: string) => void
 ) {
-    const openai = new OpenAI({ apiKey });
+    const openai = apiUrl ? new OpenAI({ 
+        apiKey, 
+        baseURL: apiUrl 
+    }) : new OpenAI({ apiKey });
 
     const openaiMessages = messages.map(msg => {
         if (msg.role === 'function') {
