@@ -2,7 +2,7 @@
   "name": "ai-coder",
   "displayName": "AI Coder",
   "description": "Code using OpenAI, Anthropic, and DeepSeek",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "publisher": "RizwanAnsari",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -88,12 +88,14 @@
           "enum": [
             "claude-3-5-haiku-latest",
             "claude-3-5-sonnet-latest",
-            "claude-3-opus-latest"
+            "claude-3-opus-latest",
+            "claude-3-7-sonnet-latest"
           ],
           "enumDescriptions": [
             "Claude 3.5 Haiku",
             "Claude 3.5 Sonnet",
-            "Claude 3 Opus"
+            "Claude 3 Opus",
+            "Claude 3.7 Sonnet"
           ],
           "description": "Anthropic Model to use"
         },
